@@ -1,0 +1,47 @@
+node('test')
+{
+    stage('Checkout SRC from Git')
+    {
+        git branch: 'Dev', credentialsId: 'jenkins-git', url: 'https://github.com/dsaha-84/jenkins-docker-pipeline.git'
+
+    }
+    stage('Sonar Code Quality Check')
+    {
+        def mvnHOME=tool name: 'Maven', type: 'maven'
+        withSonarQubeEnv('SonarQube')
+        {
+            sh "${mvnHOME}/bin/mvn sonar:sonar"
+        }
+
+        }
+        stage('Maven Compile & Build')
+        {
+            def mvnHOME=tool name: 'Maven', type: 'maven'
+            def mvnCMD="${mvnHOME}/bin/mvn"
+            sh "${mvnCMD} clean package"
+        }
+        stage('Building Docker Image')
+        {
+            sh 'docker build -t dsaha84/myapp:2.0 .'
+        }
+        stage('Push Image in Docker-Hub')
+        {
+            withCredentials([string(credentialsId: 'jenkins-dockerhub', variable: 'dockerhubpasswd')]) 
+            {
+               sh "docker login -u dsaha84 -p ${dockerhubpasswd}" 
+    
+            }
+            sh 'docker push dsaha84/myapp:2.0'
+            
+        }
+        stage('Run Image in Deploy-Server')
+        {
+            def dockerRun='docker run -p 8080:8080 -d --name manojsaha dsaha84/myapp:2.0'
+            sshagent(['master-depserver']) 
+            {
+             sh "ssh -o StrictHostKeyChecking=no depserver@192.168.2.253 ${dockerRun}"
+            }
+
+        }
+        
+}
