@@ -1,0 +1,72 @@
+node('test')
+{
+    stage('SCM Checkout')
+    {
+        git branch: 'Dev', credentialsId: 'jenkins-git', url: 'https://github.com/dsaha-84/jenkins-docker-pipeline.git'
+    }
+    stage('Sonar Code Quality Check')
+    {
+        def mvnHOME=tool name: 'Maven', type: 'maven'
+        withSonarQubeEnv('SonarQube')
+        {
+            sh "${mvnHOME}/bin/mvn sonar:sonar"
+        }
+
+        }
+        stage('Maven Compile & Build')
+        {
+            def mvnHOME=tool name: 'Maven', type: 'maven'
+            def mvnCMD="${mvnHOME}/bin/mvn"
+            sh "${mvnCMD} clean package"
+        }
+        stage('Building Docker Image')
+        {
+            sh 'docker build -t dsaha84/myapp:3.0 .'
+        }
+        stage('Push Image in Docker-Hub')
+        {
+            withCredentials([string(credentialsId: 'jenkins-dockerhub', variable: 'dockerhubpasswd')]) 
+            {
+               sh "docker login -u dsaha84 -p ${dockerhubpasswd}" 
+    
+            }
+            sh 'docker push dsaha84/myapp:3.0'
+            
+        }
+        stage('Configure Ansible')
+        {
+            def installA='sudo yum install -y epel-release python python-devel python-pip openssl'
+            def installB='sudo yum install ansible -y'
+            
+            sshagent(['ansibleSSHAgent'])
+            {
+                sh "ssh -o StrictHostKeyChecking=no ansible@192.168.1.55 ${installA}"
+                sh "ssh -o StrictHostKeyChecking=no ansible@192.168.1.55 ${installB}"
+                
+    
+            }
+
+        }
+        stage('Running Ansible Playbook')
+        {
+            def installDocker='ansible-playbook playbook.yml'
+        
+        
+          sshagent(['ansibleSSHAgent'])
+            {
+                sh "ssh -o StrictHostKeyChecking=no ansible@192.168.1.55 ${installDocker}"
+        
+            }
+        
+       }
+       stage('Run Image in AnsibleNode-Server')
+        {
+            def dockerRun='docker run -p 8080:8080 -d --name manojsaha dsaha84/myapp:2.0'
+            sshagent(['ansiblenodesSSHAgent'])
+            {
+             sh "ssh -o StrictHostKeyChecking=no centos@192.168.2.202 ${dockerRun}"
+             sh "ssh -o StrictHostKeyChecking=no centos@192.168.2.178 ${dockerRun}"
+            }
+
+        }
+}
