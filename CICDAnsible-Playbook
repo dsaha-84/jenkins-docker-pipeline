@@ -1,0 +1,36 @@
+---
+- hosts: node
+  become: yes
+  remote_user: centos
+  tasks:
+    - name: Insalling yum-utils
+      yum:
+        name: yum-utils
+        state: latest
+    - name: Running yum-config-manager
+      get_url:
+        url: https://download.docker.com/linux/centos/docker-ce.repo
+        dest: /etc/yum.repos.d/docker-ce.repo
+        mode: 0644
+    - name:  Installing Docker latest version
+      command: yum install -y --setopt=obsoletes=0 docker-ce-17.03.0.ce-1.el7.centos
+
+
+    - name: Add centos user to docker group
+      command: gpasswd -a  centos docker
+    - name:  Enabling Docker service
+      service:
+        name: docker
+        state: started
+        enabled: yes
+    - name: Assign permission to socket
+      command: chmod 777 /var/run/docker.sock
+
+    - name: Add centos user to docker group
+      command: gpasswd -a  centos docker
+    - name:  Enabling Docker service
+      service:
+        name: docker
+        state: restarted
+        enabled: yes
+...
