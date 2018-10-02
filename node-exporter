@@ -18,4 +18,9 @@
         dest: /etc/systemd/system/
 
     - name: Now reload the systemd system then start and enable
-      command: systemctl daemon-reload; systemctl start node_exporter; systemctl enable node_exporter
+      command: systemctl daemon-reload
+    - name:
+      command: systemctl start node_exporter
+    - name:
+      command:  systemctl enable node_exporter
+
