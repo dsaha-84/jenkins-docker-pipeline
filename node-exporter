@@ -1,0 +1,21 @@
+---
+- hosts: node-exporter
+  become: yes
+  remote_user: centos
+  tasks:
+    - name: Download node-exporter tar file
+      command: wget https://github.com/prometheus/node_exporter/releases/download/v0.16.0-rc.1/node_exporter-0.16.0-rc.1.linux-amd64.tar.gz
+
+    - name: Extract the node_exporter
+      command: tar -xzvf node_exporter-0.16.0-rc.1.linux-amd64.tar.gz
+
+    - name: rename the directory to node_exporter
+      command: mv node_exporter-0.16.0-rc.1.linux-amd64 node_exporter
+
+    - name: calling template to create node-exporter service
+      template:
+        src: templates/node_exporter.service
+        dest: /etc/systemd/system/
+
+    - name: Now reload the systemd system then start and enable
+      command: systemctl daemon-reload; systemctl start node_exporter; systemctl enable node_exporter
