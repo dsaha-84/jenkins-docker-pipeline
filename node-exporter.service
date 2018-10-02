@@ -1,0 +1,11 @@
+[Unit]
+Description=Node Exporter
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+User=centos
+ExecStart=/home/centos/node_exporter-0.16.0-rc.1.linux-amd64/node_exporter
+
+[Install]
+WantedBy=default.target
